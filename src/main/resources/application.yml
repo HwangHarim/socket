@@ -1,0 +1,7 @@
+netty:
+  host: 127.0.0.1
+  tcp-port: 8090
+  boss-count: 1
+  worker-count: 10
+  keep-alive: true
+  backlog: 100
