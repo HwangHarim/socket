@@ -1,7 +1,9 @@
 package game.socket.handler;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.util.CharsetUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -36,24 +38,19 @@ public class TestHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        // msg가 ByteBuf인지 확인합니다.
-        if (msg instanceof ByteBuf) {
-            ByteBuf mBuf = (ByteBuf) msg;
+        if (msg instanceof String) {
+            // byte[]를 ByteBuf로 변환
+            byte[] byteArray = ((String) msg).getBytes();
+            ByteBuf byteBuf = Unpooled.wrappedBuffer(byteArray);
 
-            try {
-                // 데이터를 공유 버퍼(buff)에 축적
-                buff.writeBytes(mBuf);
+            // 변환된 ByteBuf 처리
+            System.out.println("Received ByteBuf: " + byteBuf.toString(io.netty.util.CharsetUtil.UTF_8));
 
-                // 클라이언트로 데이터를 전송하고 채널을 닫습니다.
-                final ChannelFuture f = ctx.writeAndFlush(buff.copy());
-                f.addListener(ChannelFutureListener.CLOSE);
-            } finally {
-                // ByteBuf의 리소스를 해제합니다.
-                mBuf.release();
-            }
+            // 필요에 따라 ByteBuf를 release해야 함
+            byteBuf.release();
         } else {
-            // msg가 ByteBuf가 아닌 경우, 파이프라인을 통해 다음 핸들러로 메시지를 전달
-            ctx.fireChannelRead(msg);
+            // 다른 타입의 메시지 처리
+            System.err.println("Unsupported message type: " + msg.getClass().getName());
         }
     }
 

@@ -33,38 +33,47 @@ public class NettyConfiguration {
     private int workerCount;
 
     @Value("${netty.keep-alive}")
-    private int keepAlive;
+    private boolean keepAlive;
 
     @Value("${netty.backlog}")
     private int backlog;
 
-
     @Bean
     public ServerBootstrap serverBootstrap(NettyChannelInitializer nettyChannelInitializer) {
-        // ServerBootstrap : 서버 설정을 도와주는 class
-        ServerBootstrap serverBootstrap = new ServerBootstrap();
-        serverBootstrap.group(bossGroup(), workerGroup()) // (1)
-                .channel(NioServerSocketChannel.class)    // (2)
+        // ServerBootstrap: 서버 설정을 도와주는 class
+        ServerBootstrap b = new ServerBootstrap();
+        b.group(bossGroup(), workerGroup())
+                // NioServerSocketChannel: incoming connections를 수락하기 위해 새로운 Channel을 객체화할 때 사용
+                .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.DEBUG))
-                .childHandler(nettyChannelInitializer);   // (3)
-        serverBootstrap.option(ChannelOption.SO_BACKLOG, backlog);
+                // ChannelInitializer: 새로운 Channel을 구성할 때 사용되는 특별한 handler. 주로 ChannelPipeline으로 구성
+                .childHandler(nettyChannelInitializer);
 
-        return serverBootstrap;
+        // ServerBootstarp에 다양한 Option 추가 가능
+        // SO_BACKLOG: 동시에 수용 가능한 최대 incoming connections 개수
+        // 이 외에도 SO_KEEPALIVE, TCP_NODELAY 등 옵션 제공
+        b.option(ChannelOption.SO_BACKLOG, backlog);
+        b.option(ChannelOption.SO_KEEPALIVE, keepAlive);
+
+        return b;
     }
 
+    // boss: incoming connection을 수락하고, 수락한 connection을 worker에게 등록(register)
     @Bean(destroyMethod = "shutdownGracefully")
     public NioEventLoopGroup bossGroup() {
-        return new NioEventLoopGroup(bossCount); // (4)
+        return new NioEventLoopGroup(bossCount);
     }
 
-    @Bean(destroyMethod = "shutdownGracefully") // (5)
+    // worker: boss가 수락한 연결의 트래픽 관리
+    @Bean(destroyMethod = "shutdownGracefully")
     public NioEventLoopGroup workerGroup() {
-        return new NioEventLoopGroup(workerCount); // (6)
+        return new NioEventLoopGroup(workerCount);
     }
 
+    // IP 소켓 주소(IP 주소, Port 번호)를 구현
+    // 도메인 이름으로 객체 생성 가능
     @Bean
-    public InetSocketAddress tcpPort() {
-        // (7)
-        return new InetSocketAddress(host, port); // 적절한 포트 번호와 호스트 정보로 변경해주세요.
+    public InetSocketAddress inetSocketAddress() {
+        return new InetSocketAddress(host, port);
     }
 }
